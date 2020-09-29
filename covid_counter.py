@@ -39,5 +39,5 @@ while True:
     else:
         print('Cases unchanged.')
 
-    print(f'Sleeping for {sleep_time} seconds...')
+    print('Sleeping for {} seconds...'.format(sleep_time))
     sleep(sleep_time)
