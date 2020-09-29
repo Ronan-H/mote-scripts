@@ -9,7 +9,15 @@ sleep_time = 5 * 60
 
 
 def new_cases_today_bin():
-    data = requests.get('https://api.covid19api.com/country/ireland/status/confirmed/live').json()
+    data_retrieved = False
+
+    while not data_retrieved:
+        try:
+            data = requests.get('https://api.covid19api.com/country/ireland/status/confirmed/live').json()
+            data_retrieved = True
+        except:
+            print('Error on request, sleeping for 30 seconds...')
+            sleep(30)
     tot_cases_today = int(data[-1]['Cases'])
     tot_cases_yesterday = int(data[-2]['Cases'])
     new_cases_today = tot_cases_today - tot_cases_yesterday
