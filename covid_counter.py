@@ -40,7 +40,7 @@ while True:
 
         for i, v in enumerate(cases_bin):
             if v == '1':
-                mote.set_pixel(1, i, 255, 255, 255, 1)
+                mote.set_pixel(1, i, 255, 255, 255, 0.5)
             else:
                 mote.set_pixel(1, i, 0, 0, 0, 0)
             mote.show()
