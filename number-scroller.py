@@ -55,7 +55,7 @@ last_new_cases = None
 mote.clear()
 
 scrolls_until_refresh = 50
-scrolls_left = scrolls_until_refresh
+scrolls_left = -1
 scroll_y = 0
 scroll_sleep = 0.25
 spacing = 1
@@ -64,24 +64,27 @@ display_text = None
 
 while True:
     if display_text is None or scroll_y > len(display_text) * 6 * 2:  # TODO work out when scroll has reached end
-        new_cases = new_cases_today()
-        display_text = "CASES TODAY {}".format(new_cases)
-
-        if (not last_new_cases) or new_cases != last_new_cases:
-            print('Cases changed, new scroll text:', display_text)
-        else:
-            print('Cases unchanged.')
+        scrolls_left -= 1
+        scroll_y = -3
+        if scrolls_left <= 0:
+            print('Retrieving today\'s new cases from API...')
+            new_cases = new_cases_today()
+            display_text = "CASES TODAY {}".format(new_cases)
+            if (not last_new_cases) or new_cases != last_new_cases:
+                print('Updated scroll text:', display_text)
+            scrolls_left = scrolls_until_refresh
 
     y = scroll_y
-    for i, c in enumerate(display_text):
+    for c in display_text:
         pixels = char_mappings[c]
 
         for py, row in enumerate(pixels):
             for px, pixel_on in enumerate(row):
-                if pixel_on:
-                    mote.set_pixel(px + 1, y + py, 255, 255, 255, 0.05)
+                y_loc = y + py
+                if 0 <= y_loc <= 15 and pixel_on:
+                    mote.set_pixel(px + 1, y_loc, 255, 255, 255, 0.05)
                 else:
-                    mote.set_pixel(px + 1, y + py, 0, 0, 0, 0)
+                    mote.set_pixel(px + 1, y_loc, 0, 0, 0, 0)
         y += len(pixels) + spacing
     mote.show()
     scroll_y += 1
