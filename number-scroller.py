@@ -53,10 +53,10 @@ mote.clear()
 scrolls_until_refresh = 25
 scrolls_left = -1
 scroll_y = 0
-scroll_sleep = 0.08
-spacing = 1
+scroll_sleep = 0.1
+spacing = 2
 
-colour_cycle = ((0, 255, 0), (255, 255, 255), (255, 100, 0))
+colour_cycle = ((255, 0, 0),)
 colour_index = -1
 
 display_text = None
@@ -84,7 +84,7 @@ while True:
                 y_loc = y - py + 16
                 if 0 <= y_loc <= 15:
                     if pixel_on:
-                        mote.set_pixel(px + 1, y_loc, *colour_cycle[(colour_index + ci) % 3], 0.05)
+                        mote.set_pixel(px + 1, y_loc, *colour_cycle[(colour_index + ci) % len(colour_cycle)], 0.03)
         y -= len(pixels) + spacing
     mote.show()
     scroll_y += 1

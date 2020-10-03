@@ -1,0 +1,2 @@
+cd ~/code/mote-scripts
+python3 number-scroller.py
