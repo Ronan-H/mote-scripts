@@ -6,18 +6,16 @@ from PIL import Image
 
 def new_cases_today():
     data_retrieved = False
+    data = '0000'
 
     while not data_retrieved:
         try:
-            data = requests.get('https://api.covid19api.com/country/ireland/status/confirmed/live').json()
+            data = requests.get('https://covid19.shanehastings.eu/api/daily/cases/').json()
             data_retrieved = True
         except:
             print('Error on request, sleeping for 30 seconds...')
             sleep(30)
-    tot_cases_today = int(data[-1]['Cases'])
-    tot_cases_yesterday = int(data[-2]['Cases'])
-    num_cases_today = tot_cases_today - tot_cases_yesterday
-    return num_cases_today
+    return data
 
 
 def gen_char_mappings():
@@ -50,7 +48,7 @@ last_new_cases = None
 
 mote.clear()
 
-scrolls_until_refresh = 25
+scrolls_until_refresh = 10
 scrolls_left = -1
 scroll_y = 0
 scroll_sleep = 0.1
