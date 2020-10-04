@@ -1,0 +1,1 @@
+put /home/ronan/code/mote-scripts/*.p* /home/pi/code/mote-scripts
