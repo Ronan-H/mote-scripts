@@ -4,7 +4,7 @@ from time import sleep
 from PIL import Image
 
 
-def new_stats_today():
+def new_stats_today(retry_wait):
     data_retrieved = False
     stats = {}
 
@@ -14,65 +14,70 @@ def new_stats_today():
             stats['deaths'] = requests.get('https://covid19.shanehastings.eu/api/daily/deaths/').json()
             data_retrieved = True
         except:
-            print('Error on request, sleeping for 15 seconds...')
-            sleep(15)
+            print('Error on request, sleeping for {} seconds...'.format(retry_wait))
+            sleep(retry_wait)
     return stats
 
 
-char_width = 4
-char_height = 5
-
-
-def gen_char_mappings():
+def gen_char_mappings(c_width, c_height):
     # using $ for a downward arrow
     char_mapping = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+=\\/%"\'!?-><.,*:;$ '
     char_img = Image.open('char-mapping.png', 'r')
-    pixels_per_char = char_width * char_height
+    pixels_per_char = c_width * c_height
     pixels = [x for sets in list(char_img.getdata()) for x in sets][3::4]
     mapping = dict()
     for i, char in enumerate(char_mapping):
-        on_indexes = [[] for _ in range(char_height)]
+        on_indexes = [[] for _ in range(c_height)]
         index = i * pixels_per_char
-        for j in range(char_height):
-            for k in range(char_width):
+        for j in range(c_height):
+            for k in range(c_width):
                 on_indexes[j].append(pixels[index] == 255)
                 index += 1
         mapping[char] = on_indexes
     return mapping
 
 
-char_mappings = gen_char_mappings()
+def open_mote():
+    m = Mote()
 
-mote = Mote()
+    for channel in range(1, 5):
+        m.configure_channel(channel, 16, False)
 
-for channel in range(1, 5):
-    mote.configure_channel(channel, 16, False)
+    return m
 
-mote.clear()
 
-scrolls_until_refresh = 10
-scrolls_left = -1
-scroll_y = 0
-scroll_sleep = 0.04
-spacing = 2
+char_width = 4
+char_height = 5
+# retrieve API stats every n scrolls
+api_refresh_rate = 10
+api_retry_wait = 15
+
+scroll_y = -1
 scroll_end = -1
+scrolls_left = -1
+scroll_sleep = 0.04
+char_spacing = 2
+
 text_colour = (255, 0, 0)
 text_brightness = 0.06
 
 display_text = None
 
+char_mappings = gen_char_mappings(char_width, char_height)
+mote = open_mote()
+
 while True:
-    if display_text is None or scroll_y >= scroll_end:  # TODO work out when scroll has reached end
+    if display_text is None or scroll_y >= scroll_end:
         scrolls_left -= 1
         scroll_y = -17
         if scrolls_left <= 0:
             print('Retrieving today\'s new cases from API...')
-            new_stats = new_stats_today()
+            new_stats = new_stats_today(api_retry_wait)
             print('Updated stats: {} cases, {} deaths'.format(new_stats['cases'], new_stats['deaths']))
             display_text = "IRISH COVID STATS TODAY +{} CASES +{} DEATHS === " \
                 .format(new_stats['cases'], new_stats['deaths'])
-            scroll_end = len(display_text) * (char_height + spacing) * 1 - spacing
-            scrolls_left = scrolls_until_refresh
+            scroll_end = len(display_text) * (char_height + char_spacing) * 1 - char_spacing
+            scrolls_left = api_refresh_rate
 
     y = scroll_y
     mote.clear()
@@ -86,7 +91,7 @@ while True:
                     if pixel_on:
                         mote.set_pixel(px + 1, y_loc, *text_colour, text_brightness)
 
-        y -= len(pixels) + spacing
+        y -= len(pixels) + char_spacing
     mote.show()
     scroll_y += 1
     sleep(scroll_sleep)
