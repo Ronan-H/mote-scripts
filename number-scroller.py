@@ -2,6 +2,7 @@ import requests
 from mote import Mote
 from time import sleep
 from PIL import Image
+import config
 
 
 def new_stats_today(retry_wait):
@@ -14,14 +15,32 @@ def new_stats_today(retry_wait):
             stats['deaths'] = requests.get('https://covid19.shanehastings.eu/api/daily/deaths/').json()
             data_retrieved = True
         except:
-            print('Error on request, sleeping for {} seconds...'.format(retry_wait))
+            print('Error on covid stats request, sleeping for {} seconds...'.format(retry_wait))
             sleep(retry_wait)
     return stats
 
 
+def retrieve_weather_info(retry_wait):
+    data_retrieved = False
+    weather = {}
+    url = 'https://api.openweathermap.org/data/2.5/weather?q=Galway&appid={}'.format(config.openweather_token)
+
+    while not data_retrieved:
+        try:
+            data = requests.get(url).json()
+            weather['temp'] = round(data['main']['temp'] - 273.15)
+            weather['wind'] = round(data['wind']['speed'])
+            weather['desc'] = data['weather'][0]['description'].upper()
+            data_retrieved = True
+        except:
+            print('Error on weather request, sleeping for {} seconds...'.format(retry_wait))
+            sleep(retry_wait)
+    return weather
+
+
 def gen_char_mappings(c_width, c_height):
     # using $ for a downward arrow
-    char_mapping = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+=\\/%"\'!?-><.,*:;$ '
+    char_mapping = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+=\\/%"\'!?-><.,*:;$° '
     char_img = Image.open('char-mapping.png', 'r')
     pixels_per_char = c_width * c_height
     pixels = [x for sets in list(char_img.getdata()) for x in sets][3::4]
@@ -55,7 +74,7 @@ api_retry_wait = 15
 scroll_y = -1
 scroll_end = -1
 scrolls_left = -1
-scroll_sleep = 0.04
+scroll_sleep = 0.03
 char_spacing = 2
 
 text_colour = (255, 0, 0)
@@ -73,9 +92,13 @@ while True:
         if scrolls_left <= 0:
             print('Retrieving today\'s new cases from API...')
             new_stats = new_stats_today(api_retry_wait)
-            print('Updated stats: {} cases, {} deaths'.format(new_stats['cases'], new_stats['deaths']))
-            display_text = "IRISH COVID STATS TODAY +{} CASES +{} DEATHS === " \
-                .format(new_stats['cases'], new_stats['deaths'])
+            cur_weather = retrieve_weather_info(api_retry_wait)
+            print('Updated covid stats: {} cases, {} deaths'.format(new_stats['cases'], new_stats['deaths']))
+            print('Updated weather info: desc "{}", {}°C, wind {}kmph'.format(
+                cur_weather['desc'], cur_weather['temp'], cur_weather['wind']))
+            display_text = "COVID$  {} CASES   {} DEATHS   -   WEATHER$  {}  TEMP {}C  WIND {}K === " \
+                .format(new_stats['cases'], new_stats['deaths'],
+                        cur_weather['desc'], cur_weather['temp'], cur_weather['wind'])
             scroll_end = len(display_text) * (char_height + char_spacing) * 1 - char_spacing
             scrolls_left = api_refresh_rate
 

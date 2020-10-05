@@ -72,3 +72,5 @@ fabric.properties
 venv/
 .idea/
 
+# configuration (usernames & passwords etc)
+config.py
