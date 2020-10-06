@@ -2,16 +2,17 @@ import requests
 from mote import Mote
 from time import sleep
 from PIL import Image
+import time
 import config
 
 
-def retry_until_success(api_func, func_name, retry_wait):
+def retry_until_success(api_func, func_name, retry_wait, *args):
     data_retrieved = False
     data = {}
 
     while not data_retrieved:
         try:
-            data = api_func()
+            data = api_func(*args)
             data_retrieved = True
         except:
             print('Error on {} request, sleeping for {} seconds...'.format(
@@ -37,6 +38,14 @@ def retrieve_weather_info():
         'temp': round(data['main']['temp'] - 273.15), 'wind': round(data['wind']['speed'] * 60 * 60 / 1000),
         'desc': data['weather'][0]['description'].upper()
     }
+
+
+def retrieve_stock_value(ticker):
+    return str(requests.get(
+        'https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={}&apikey={}'.format(
+            ticker, config.alphavantage_token
+        )
+    ).json()['Global Quote']['05. price'])[:5]
 
 
 def gen_char_mappings(c_width, c_height):
@@ -81,6 +90,13 @@ char_spacing = 2
 text_colour = (255, 0, 0)
 text_brightness = 0.06
 
+# time of last stock check
+last_stock_check = 0
+max_stock_checks_per_day = 500
+# minimum time between stock checks
+stock_check_wait = (60 * 60 * 24) / (max_stock_checks_per_day - 50)
+stock_ticker = 'CSCO'
+
 display_text = None
 
 char_mappings = gen_char_mappings(char_width, char_height)
@@ -97,10 +113,21 @@ while True:
             print('Updated covid stats: {} cases, {} deaths'.format(new_stats['cases'], new_stats['deaths']))
             print('Updated weather info: desc "{}", {}°C, wind {}kmph'.format(
                 cur_weather['desc'], cur_weather['temp'], cur_weather['wind']))
-            display_text = "COVID$   {} CASE{}   {} DEATH{}   -   WEATHER$   {}   TEMP {}C   WIND {}KM   ===   " \
+
+            if time.time() > last_stock_check + stock_check_wait:
+                # update stock price
+                stock_price = retry_until_success(retrieve_stock_value, 'stock value', api_retry_wait, stock_ticker)
+                last_stock_check = time.time()
+
+                print('Updated stock price for {}, new price: {}'.format(stock_ticker, stock_price))
+
+            display_text = "COVID$   {} CASE{}   {} DEATH{}   -   " \
+                           "WEATHER$   {}   TEMP {}C   WIND {}KM   -   " \
+                           "{} PRICE {} USD   ===   " \
                 .format(new_stats['cases'], '' if new_stats['cases'] == 1 else 'S',
                         new_stats['deaths'], '' if new_stats['deaths'] == 1 else 'S',
-                        cur_weather['desc'], cur_weather['temp'], cur_weather['wind'])
+                        cur_weather['desc'], cur_weather['temp'], cur_weather['wind'],
+                        stock_ticker, stock_price)
             scroll_end = len(display_text) * (char_height + char_spacing) * 1 - char_spacing
             scrolls_left = api_refresh_rate
 
