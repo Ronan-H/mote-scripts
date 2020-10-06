@@ -29,7 +29,7 @@ def retrieve_weather_info(retry_wait):
         try:
             data = requests.get(url).json()
             weather['temp'] = round(data['main']['temp'] - 273.15)
-            weather['wind'] = round(data['wind']['speed'])
+            weather['wind'] = round(data['wind']['speed'] * 60 * 60 / 1000)
             weather['desc'] = data['weather'][0]['description'].upper()
             data_retrieved = True
         except:
@@ -96,8 +96,9 @@ while True:
             print('Updated covid stats: {} cases, {} deaths'.format(new_stats['cases'], new_stats['deaths']))
             print('Updated weather info: desc "{}", {}°C, wind {}kmph'.format(
                 cur_weather['desc'], cur_weather['temp'], cur_weather['wind']))
-            display_text = "COVID$  {} CASES   {} DEATHS   -   WEATHER$  {}  TEMP {}C  WIND {}K === " \
-                .format(new_stats['cases'], new_stats['deaths'],
+            display_text = "COVID$   {} CASE{}   {} DEATH{}   -   WEATHER$   {}   TEMP {}C   WIND {}KM   ===   " \
+                .format(new_stats['cases'], '' if new_stats['cases'] == 1 else 'S',
+                        new_stats['deaths'], '' if new_stats['deaths'] == 1 else 'S',
                         cur_weather['desc'], cur_weather['temp'], cur_weather['wind'])
             scroll_end = len(display_text) * (char_height + char_spacing) * 1 - char_spacing
             scrolls_left = api_refresh_rate
