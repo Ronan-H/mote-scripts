@@ -5,37 +5,38 @@ from PIL import Image
 import config
 
 
-def new_stats_today(retry_wait):
+def retry_until_success(api_func, func_name, retry_wait):
     data_retrieved = False
-    stats = {}
+    data = {}
 
     while not data_retrieved:
         try:
-            stats['cases'] = requests.get('https://covid19.shanehastings.eu/api/daily/cases/').json()
-            stats['deaths'] = requests.get('https://covid19.shanehastings.eu/api/daily/deaths/').json()
+            data = api_func()
             data_retrieved = True
         except:
-            print('Error on covid stats request, sleeping for {} seconds...'.format(retry_wait))
+            print('Error on {} request, sleeping for {} seconds...'.format(
+                func_name, retry_wait)
+            )
             sleep(retry_wait)
-    return stats
+    return data
 
 
-def retrieve_weather_info(retry_wait):
-    data_retrieved = False
-    weather = {}
-    url = 'https://api.openweathermap.org/data/2.5/weather?q=Galway&appid={}'.format(config.openweather_token)
+def retrieve_covid_stats():
+    return {
+        'cases': requests.get('https://covid19.shanehastings.eu/api/daily/cases/').json(),
+        'deaths': requests.get('https://covid19.shanehastings.eu/api/daily/deaths/').json()
+    }
 
-    while not data_retrieved:
-        try:
-            data = requests.get(url).json()
-            weather['temp'] = round(data['main']['temp'] - 273.15)
-            weather['wind'] = round(data['wind']['speed'] * 60 * 60 / 1000)
-            weather['desc'] = data['weather'][0]['description'].upper()
-            data_retrieved = True
-        except:
-            print('Error on weather request, sleeping for {} seconds...'.format(retry_wait))
-            sleep(retry_wait)
-    return weather
+
+def retrieve_weather_info():
+    data = requests.get(
+        'https://api.openweathermap.org/data/2.5/weather?q=Galway&appid={}'.format(config.openweather_token)
+    ).json()
+
+    return {
+        'temp': round(data['main']['temp'] - 273.15), 'wind': round(data['wind']['speed'] * 60 * 60 / 1000),
+        'desc': data['weather'][0]['description'].upper()
+    }
 
 
 def gen_char_mappings(c_width, c_height):
@@ -68,7 +69,7 @@ def open_mote():
 char_width = 4
 char_height = 5
 # retrieve API stats every n scrolls
-api_refresh_rate = 10
+api_refresh_rate = 3
 api_retry_wait = 15
 
 scroll_y = -1
@@ -91,8 +92,8 @@ while True:
         scroll_y = -17
         if scrolls_left <= 0:
             print('Retrieving today\'s new cases from API...')
-            new_stats = new_stats_today(api_retry_wait)
-            cur_weather = retrieve_weather_info(api_retry_wait)
+            new_stats = retry_until_success(retrieve_covid_stats, 'covid stats', api_retry_wait)
+            cur_weather = retry_until_success(retrieve_weather_info, 'weather info', api_retry_wait)
             print('Updated covid stats: {} cases, {} deaths'.format(new_stats['cases'], new_stats['deaths']))
             print('Updated weather info: desc "{}", {}°C, wind {}kmph'.format(
                 cur_weather['desc'], cur_weather['temp'], cur_weather['wind']))
